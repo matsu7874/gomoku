@@ -1,0 +1,8 @@
+[package]
+name = "gomoku"
+version = "0.1.0"
+authors = ["matsu7874 <mtsmtkmt@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ndarray = "*"
