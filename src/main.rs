@@ -1,6 +1,8 @@
 extern crate ndarray;
+extern crate rand;
 use ndarray::{ArrayD, IxDyn};
 use std::io::{stdin,stdout, Write, BufWriter};
+use rand::prelude::*;
 
 struct Hand {
     y: usize,
@@ -17,7 +19,7 @@ struct Board {
     height: usize,
     width: usize,
     cells: ArrayD<i8>,
-    turn: i8,
+    turn: usize,
     is_finished: bool,
     state: Option<State>,
 }
@@ -35,23 +37,39 @@ impl Board {
         }
     }
     pub fn update(self: &mut Board, hand: &Hand) {
-        if hand.y < 0 || hand.y >= self.height || hand.x < 0 || hand.x >= self.width {
-            let winner = 1 - self.turn & 1;
-            self.state = Some(State {
-                winner: winner,
-                message: format!("player {} won: invalid hand", winner),
-            });
-            self.is_finished = true;
-        } else if self.cells[[hand.y, hand.x]] != 0 {
-            let winner = 1 - self.turn & 1;
+        if !self.is_valid(hand) {
+            let winner = 1 - (self.turn & 1) as i8;
             self.state = Some(State {
                 winner: winner,
                 message: format!("player {} won: invalid hand", winner),
             });
             self.is_finished = true;
         } else {
-            self.cells[[hand.y, hand.x]] = 2 * (self.turn & 1) - 1;
+            self.cells[[hand.y, hand.x]] = 2 * (self.turn & 1)as i8 - 1;
             self.turn += 1;
+        }
+        if self.turn > self.height * self.width{
+            self.is_finished = true;
+            self.state = Some(State{winner: 0, message:format!("draw")});
+        }
+    }
+    pub fn is_valid(self: &Board, hand: &Hand)-> bool{
+        if hand.y < 0 || hand.y >= self.height || hand.x < 0 || hand.x >= self.width {
+            return false;
+        } else if self.cells[[hand.y, hand.x]] != 0 {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    pub fn is_player_won(self: &Board, hand: &Hand)-> bool{
+        if hand.y < 0 || hand.y >= self.height || hand.x < 0 || hand.x >= self.width {
+            return false;
+        } else if self.cells[[hand.y, hand.x]] != 0 {
+            return false;
+        } else {
+            return true;
         }
     }
     pub fn debug(self: &Board) {
@@ -77,7 +95,14 @@ impl Board {
 }
 
 fn get_hand(board: &Board) -> Hand {
-    Hand { y: 2, x: 2 }
+    let y = random::<usize>() % board.height;
+    let x = random::<usize>() % board.width;
+    let mut hand = Hand { y: y, x: x};
+    while !board.is_valid(&hand){
+        hand.y = random::<usize>() % board.height;
+        hand.x = random::<usize>() % board.width;
+    }
+    hand
 }
 
 fn get_human_hand(board: &Board) -> Hand {
@@ -101,11 +126,13 @@ fn main() {
     let mut board = Board::new(H, W);
     while !board.is_finished {
         let hand = if board.turn & 1 == 1 {
-            get_human_hand(&board)
+            // get_human_hand(&board)
+            get_hand(&board)
         } else {
             get_hand(&board)
         };
         board.update(&hand);
+        board.debug();
     }
     board.debug();
     println!("{:?}", board.state);
